@@ -1,7 +1,7 @@
 name: napari-bootseg
 display_name: Bootseg
 # use 'hidden' to remove plugin from napari hub search results
-visibility: public
+visibility: hidden
 # see https://napari.org/stable/plugins/technical_references/manifest.html#fields for valid categories
 # categories: []
 contributions:
@@ -18,18 +18,9 @@ contributions:
     - id: napari-bootseg.make_sample_data
       python_name: napari_bootseg._sample_data:make_sample_data
       title: Load sample data from Bootseg
-    - id: napari-bootseg.make_container_widget
-      python_name: napari_bootseg:ImageThreshold
-      title: Make threshold Container widget
-    - id: napari-bootseg.make_magic_widget
-      python_name: napari_bootseg:threshold_magic_widget
-      title: Make threshold magic widget
-    - id: napari-bootseg.make_function_widget
-      python_name: napari_bootseg:threshold_autogenerate_widget
-      title: Make threshold function widget
-    - id: napari-bootseg.make_qwidget
-      python_name: napari_bootseg:ExampleQWidget
-      title: Make example QWidget
+    - id: napari-bootseg.prediction_widget
+      python_name: napari_bootseg:PredictLabels
+      title: Prediction Widget
   readers:
     - command: napari-bootseg.get_reader
       accepts_directories: false
@@ -46,12 +37,5 @@ contributions:
       display_name: Bootseg
       key: unique_id.1
   widgets:
-    - command: napari-bootseg.make_container_widget
-      display_name: Container Threshold
-    - command: napari-bootseg.make_magic_widget
-      display_name: Magic Threshold
-    - command: napari-bootseg.make_function_widget
-      autogenerate: true
-      display_name: Autogenerate Threshold
-    - command: napari-bootseg.make_qwidget
-      display_name: Example QWidget
+    - command: napari-bootseg.prediction_widget
+      display_name: PredictLabels

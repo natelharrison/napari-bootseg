@@ -1,66 +1,68 @@
 import numpy as np
+import pytest
 
 from napari_bootseg._widget import (
-    ExampleQWidget,
-    ImageThreshold,
-    threshold_autogenerate_widget,
-    threshold_magic_widget,
+    PredictLabels
 )
 
+import numpy as np
+import pytest
 
-def test_threshold_autogenerate_widget():
-    # because our "widget" is a pure function, we can call it and
-    # test it independently of napari
-    im_data = np.random.random((100, 100))
-    thresholded = threshold_autogenerate_widget(im_data, 0.5)
-    assert thresholded.shape == im_data.shape
-    # etc.
+from napari_bootseg._widget import PredictLabels
 
-
-# make_napari_viewer is a pytest fixture that returns a napari viewer object
-# you don't need to import it, as long as napari is installed
-# in your testing environment
-def test_threshold_magic_widget(make_napari_viewer):
+def test_container_has_children_in_order(make_napari_viewer):
     viewer = make_napari_viewer()
-    layer = viewer.add_image(np.random.random((100, 100)))
+    w = PredictLabels(viewer)
 
-    # our widget will be a MagicFactory or FunctionGui instance
-    my_widget = threshold_magic_widget()
+    # Container behaves like a list of its children
+    assert len(w) == 2
+    # The exact objects you created are present and ordered
+    assert w[0] is w._image_layer_combo
+    assert w[1] is w._predict_btn
 
-    # if we "call" this object, it'll execute our function
-    thresholded = my_widget(viewer.layers[0], 0.5)
-    assert thresholded.shape == layer.data.shape
-    # etc.
-
-
-def test_image_threshold_widget(make_napari_viewer):
+def test_request_prediction_without_selection_raises(make_napari_viewer):
     viewer = make_napari_viewer()
-    layer = viewer.add_image(np.random.random((100, 100)))
-    my_widget = ImageThreshold(viewer)
+    w = PredictLabels(viewer)
 
-    # because we saved our widgets as attributes of the container
-    # we can set their values without having to "interact" with the viewer
-    my_widget._image_layer_combo.value = layer
-    my_widget._threshold_slider.value = 0.5
+    # No image selected -> should raise a clear error
+    with pytest.raises(ValueError):
+        w._request_prediction()
 
-    # this allows us to run our functions directly and ensure
-    # correct results
-    my_widget._threshold_im()
-    assert len(viewer.layers) == 2
-
-
-# capsys is a pytest fixture that captures stdout and stderr output streams
-def test_example_q_widget(make_napari_viewer, capsys):
-    # make viewer and add an image layer using our fixture
+@pytest.mark.parametrize("shape", [(32, 32), (8, 16), (4, 4, 4)])
+def test_request_prediction_adds_labels_layer(make_napari_viewer, shape):
     viewer = make_napari_viewer()
-    viewer.add_image(np.random.random((100, 100)))
+    img = np.random.random(shape)
+    layer = viewer.add_image(img, name="im")
 
-    # create our widget, passing in the viewer
-    my_widget = ExampleQWidget(viewer)
+    w = PredictLabels(viewer)
+    # select the layer via the combobox widget
+    w._image_layer_combo.value = layer
 
-    # call our widget method
-    my_widget._on_click()
+    # act
+    w._request_prediction()  # your method should add/replace a labels layer
 
-    # read captured output and check that it's as we expected
-    captured = capsys.readouterr()
-    assert captured.out == "napari has 1 layers\n"
+    # assert
+    name = "im_pred"
+    assert name in viewer.layers, "Prediction layer not added"
+    pred = viewer.layers[name]
+    assert pred.data.shape == img.shape
+    # labels must be integer-typed in napari
+    assert np.issubdtype(pred.data.dtype, np.integer)
+
+def test_button_is_connected_to_action(make_napari_viewer):
+    """Lightweight check that clicking the button triggers the action.
+
+    We don't rely on monkeypatching the method; we just observe the side-effect.
+    """
+    viewer = make_napari_viewer()
+    img = np.ones((10, 10))
+    layer = viewer.add_image(img, name="im")
+
+    w = PredictLabels(viewer)
+    w._image_layer_combo.value = layer
+
+    # programmatically "click" the magicgui PushButton
+    w._predict_btn.clicked.emit()  # same effect as a user click
+
+    assert "im_pred" in viewer.layers
+
