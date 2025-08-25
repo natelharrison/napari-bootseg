@@ -11,22 +11,23 @@ if TYPE_CHECKING:
     import napari
 
 
-class PredictLabels(Container):
+class ToolPanel(Container):
+    def __init__(self, viewer:"napari.viewer.Viewer", *children, **kwargs):
+        super().__init__(*children, **kwargs)
+        self.viewer = viewer
+
+class PredictLabels(ToolPanel):
     def __init__(self, viewer: "napari.viewer.Viewer"):
-        super().__init__()
-        self._viewer = viewer
+        super().__init__(viewer)
         
         # image layer combo
         self._image_layer_combo = create_widget(
             label="Image", annotation="napari.layers.Image"
         )
 
-
         # prediction button
         self._predict_btn = widgets.PushButton(text="Predict Labels")
         self._predict_btn.clicked.connect(self._predict)
-
-        
 
         self.extend(
             [
